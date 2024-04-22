@@ -51,6 +51,7 @@ mysql -h mysql.mysql.svc.cluster.local -uroot -p"$MYSQL_ROOT_PASSWORD"
 
 kubectl exec -it --namespace mysql mysql-0 -c mysql -- echo " Hello world - Example 1 "
 
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -74,11 +75,11 @@ actions:
           - -c
           - |
             echo " Hello world - Example 1 "
-
+```
 
 ## Step 2: Create an Actionset to run the blueprint
 
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: ActionSet
 metadata:
@@ -92,17 +93,18 @@ spec:
       kind: StatefulSet
       name: mysql
       namespace: mysql
-
+```
 
 ====================================================
 # Example 2 : Introduce go template options
+
 
 oc delete blueprint mysql-blueprint -n kanister
 oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
 rm -f mysql-blueprint.yaml
 
 
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -128,11 +130,16 @@ actions:
             echo "Hello world - Example 2 "
             echo "Statefulset Name is : '{{ .StatefulSet.Namespace }}'" 
             echo "Replica Count is : '{{.Object.spec.replicas }}'"
+```
+Apply the yaml file
 
+```
 oc create -f mysql-blueprint.yaml
-
+```
+Create the actionset 
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql 
-
+```
 ====================================================
 # Example 3 : KubeExec with secret loading
 
