@@ -15,17 +15,9 @@ This repo contains examples used for Kanister deep dive workshop
 
 # Install Kanister Tools
 
-## Install Go binary. Instructions @ https://go.dev/doc/install
+## Install Go binary
 
-wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
-tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
-
-add the following line to ~/.bash_profile
-export PATH=$PATH:/usr/local/go/bin
-
-. ./.bash_profile 
-
-go version
+Instructions to install go can be found here https://go.dev/doc/install
 
 
 ## The script installs both kanctl and kando
