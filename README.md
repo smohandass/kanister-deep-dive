@@ -12,14 +12,15 @@ This repo contains examples used for Kanister deep dive workshop
 6. Database service 
 
 ## Setting up Pre-Reqs
-Step 1-3 in the Pre-reqs is self explanatory and I am not covering here
+Steps 1-3 in the Pre-reqs is self explanatory and I am not covering here
 
 ### Install Kanister Tools
 
-Kanister reporsitory provides two command-line tools kanctl and kando. kanctl simplifies the process of creating the custom kanister resources. Kando is a tool to simplify object store interactions from within blueprints. Installation of these tools requires Go binary 
+Kanister reporsitory provides two command-line tools kanctl and kando. 
+
+kanctl simplifies the process of creating the custom kanister resources and Kando is a tool to simplify object store interactions from within blueprints. Installation of these tools requires Go binary 
 
 Instructions to install Go binary can be found [here](https://go.dev/doc/install)
-
 Instructions to install kanctl and kando can be found [here](https://docs.kanister.io/tooling.html?highlight=kando#install-the-tools)
 
 ### Install Kanister Operator on the k8s cluster
