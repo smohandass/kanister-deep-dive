@@ -20,25 +20,47 @@ Kanister reporsitory provides two command-line tools kanctl and kando. kanctl si
 
 Instructions to install Go binary can be found [here](https://go.dev/doc/install)
 
-Installing Kasten on AKS using Active Directory Authentication : [aks/kasten-install-ad-auth/README.md](https://github.com/smohandass/kasten-argocd-k8s/tree/main/aks/kasten-install-ad-auth)
+Instructions to install kanctl and kando can be found [here](https://docs.kanister.io/tooling.html?highlight=kando#install-the-tools)
 
-Installing Kasten on AKS using Token Authentication : [aks/kasten-install-token-auth/README.md](https://github.com/smohandass/kasten-argocd-k8s/tree/main/aks/kasten-install-token-auth)
+### Install Kanister Operator on the k8s cluster
 
-Instructions to install kanctl and kando can be found here https://docs.kanister.io/tooling.html?highlight=kando#install-the-tools
-
-# Install Kanister Operator on the k8s cluster
-
+```
 kubectl create ns kanister
-
 helm repo add kanister https://charts.kanister.io/
 helm -n kanister upgrade --install kanister --create-namespace kanister/kanister-operator
+```
 
+Verify that `kanister-operator` is successfully running 
+
+```
 kubectl get pods -n kanister
+```
 
-k api-resources | grep kan
+You should now see that Kanister has created four custom resources 
+```
+kubectl api-resources | grep kanister
+actionsets                                                                                                                   cr.kanister.io/v1alpha1                       true         ActionSet
+blueprints                                                                                                                   cr.kanister.io/v1alpha1                       true         Blueprint
+profiles                                                                                                                     cr.kanister.io/v1alpha1                       true         Profile
+repositoryservers                                                                                                            cr.kanister.io/v1alpha1                       true         RepositoryServer
+```
 
-oc run mysql-client --rm --tty -i --restart='Never' --image  docker.io/bitnami/mysql:8.0.36-debian-12-r10 --namespace mysql --env MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD --command -- bash
+### Setup a Database service
+
+To work with the kanister examples oulined in this repo we need a database service. To keep it simple, let's install a bitnami mysql database service. 
+
+```
+kubectl create ns mysql
+helm install mysql -n mysql oci://registry-1.docker.io/bitnamicharts/mysql
+```
+Verify that `mysql-0` pod is successfully running on the `mysql` namespace.
+
+Use the following command to run a mysql-client pod that can be used to connect to the database to run queries and to create database objects. 
+
+```
+kubectl run mysql-client --rm --tty -i --restart='Never' --image  docker.io/bitnami/mysql:8.0.36-debian-12-r10 --namespace mysql --env MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD --command -- bash
 mysql -h mysql.mysql.svc.cluster.local -uroot -p"$MYSQL_ROOT_PASSWORD"
+```
 
 ====================================================
 # Example 1 : echo "Hello world" 
