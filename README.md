@@ -4,30 +4,22 @@ This repo contains examples used for Kanister deep dive workshop
 
 ## Pre-reqs
 
-1. Kubernetes 1.16 or higher. 
-2. kubectl installed and setup
-3. helm installed and initialized
-4. docker installed and running
-5. A running Kanister controller
-6. Access to an S3 bucket and credentials.
-7. database service - I am using a bitnami mysql for this workshop 
+1. Kuberenetes cluster that is running v1.16 or higher. 
+2. Bastion server with kubectl, helm and docker installed
+3. Access to an S3 bucket and credentials.
+4. A running Kanister controller
+5. Database service 
 
+### Setting up Pre-Reqs
+Step 1-3 in the Pre-reqs is self explanatory and I am not covering here
 
-# Install Kanister Tools
+### Install Kanister Tools
 
-## Install Go binary
+Kanister reporsitory provides two command-line tools kanctl and kando. kanctl simplifies the process of creating the custom kanister resources. Kando is a tool to simplify object store interactions from within blueprints. Installation of these tools requires Go binary 
 
-Instructions to install go can be found here https://go.dev/doc/install
+Instructions to install Go binary can be found here https://go.dev/doc/install
 
-
-## The script installs both kanctl and kando
-wget https://raw.githubusercontent.com/kanisterio/kanister/master/scripts/get.sh
-ln -s /usr/bin/sha256sum /usr/bin/shasum
-sed -i 's/shasum -a 256/shasum/g' get.sh
-sh get.sh
-
-which kanctl kando docker kubectl helm
-
+Instructions to install kanctl and kando can be found here https://docs.kanister.io/tooling.html?highlight=kando#install-the-tools
 
 # Install Kanister Operator on the k8s cluster
 
