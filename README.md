@@ -138,14 +138,9 @@ kubectl create -f actionset.yaml
 ```
 
 
-
 ## Example 2 : Introduce go template options
 
-
-oc delete blueprint mysql-blueprint -n kanister
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-rm -f mysql-blueprint.yaml
-
+In the previous example when defining the blueprints we hard coded the container name, pod name and the namespace name on which the blueprint need to be acted upon. This is not a good practice and the arguments in an action can be parameterizes using go template options
 
 ```
 apiVersion: cr.kanister.io/v1alpha1
@@ -174,22 +169,21 @@ actions:
             echo "Statefulset Name is : '{{ .StatefulSet.Namespace }}'" 
             echo "Replica Count is : '{{.Object.spec.replicas }}'"
 ```
-Apply the yaml file
+Apply the yaml file to create the blueprint 
 
 ```
-oc create -f mysql-blueprint.yaml
+kubectl create -f mysql-blueprint.yaml
 ```
-Create the actionset 
+
+Create the actionset. In the previous example we created an actionset using yaml instructions, however an actionset can also be created using `kanctl create actionset` command. 
+
 ```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql 
 ```
-====================================================
-# Example 3 : KubeExec with secret loading
 
-oc delete blueprint mysql-blueprint -n kanister
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-rm -f mysql-blueprint.yaml
+## Example 3 : KubeExec with secret loading
 
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -220,19 +214,23 @@ actions:
             echo "Hello world - Example 3 "
             echo "Statefulset Name is : '{{ .StatefulSet.Namespace }}'" 
             echo "root_password : '{{ index .Phases.mysqldump.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}'"
+```
 
+Apply the yaml file to create the blueprint 
 
-oc create -f mysql-blueprint.yaml
+```
+kubectl create -f mysql-blueprint.yaml
+```
+
+Create the actionset
+
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql 
+```
 
-====================================================
-# Example 4 : Introduce KubeTask
+## Example 4 : Introduce KubeTask
 
-oc delete blueprint mysql-blueprint -n kanister
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-rm -f mysql-blueprint.yaml
-vi mysql-blueprint.yaml
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -262,19 +260,24 @@ actions:
             echo "Statefulset Name is : '{{ .StatefulSet.Namespace }}'" 
             echo "root_password : '{{ index .Phases.mysqldump.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}'"
             sleep 180
+```
 
+Apply the yaml file to create the blueprint 
 
-oc create -f mysql-blueprint.yaml
+```
+kubectl create -f mysql-blueprint.yaml
+```
+
+Create the actionset
+
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql 
+```
+
+## Example 5 : Mysqldump of the database
 
 
-====================================================
-# Example 5 : Mysqldump of the database
-
-oc delete blueprint mysql-blueprint -n kanister
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-rm -f mysql-blueprint.yaml
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -305,20 +308,24 @@ actions:
             mysqldump --column-statistics=0 -u root --password=${root_password} -h mysql.mysql.svc.cluster.local --single-transaction --all-databases > ${backup_file_path}
             ls -l ${backup_file_path}
             sleep 180
+```
 
+Apply the yaml file to create the blueprint 
 
-oc create -f mysql-blueprint.yaml
+```
+kubectl create -f mysql-blueprint.yaml
+```
+
+Create the actionset
+
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql
+```
 
-====================================================
-# Example 6 : Mysql dump of the database (versioned) and output to another pvc
-
-
-oc delete blueprint mysql-blueprint -n kanister
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-rm -f mysql-blueprint.yaml
+## Example 6 : Mysql dump of the database (versioned) and output to another pvc
 
 
+```
 cat <<EOF | kubectl create -f -
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -333,8 +340,9 @@ spec:
       storage: 10Gi
   storageClassName: rook-ceph-block
 EOF
+```
 
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -370,19 +378,30 @@ actions:
             mysqldump --column-statistics=0 -u root --password=${root_password} -h mysql.mysql.svc.cluster.local --single-transaction --all-databases > /tmp/mysqldump-${backupTimestamp}.sql
             cp /tmp/mysqldump-${backupTimestamp}.sql /backup-data/
             sleep 300
+```
 
-oc create -f mysql-blueprint.yaml
+Apply the yaml file to create the blueprint 
+
+```
+kubectl create -f mysql-blueprint.yaml
+```
+
+Create the actionset
+
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql
-oc get pods -n mysql
+```
 
-====================================================
-# Example 7 : Build an image that use mysqldump and kando 
+## Example 7 : Build an image that use mysqldump and kando 
 
-
+```
 docker version
 systemctl status docker
+```
 
+Create a dockerfile
 
+```
 FROM registry.access.redhat.com/ubi9/ubi:9.3-1476 as builder
 
 RUN dnf clean all && rm -rf /var/cache/dnf
@@ -410,19 +429,13 @@ docker ps -a
 docker exec -it 44524cc8b665  /bin/bash
 docker tag kanister-demo-mysql:1.0.0 bullseie/kanister-demo-mysql:1.0.0
 docker push bullseie/kanister-demo-mysql:1.0.0
+```
 
+## Example 8 : Mysqldump of the database and export to object store using Kando
 
+### Example 8.1 - Mysqldump of the database using our custom image
 
-====================================================
-# Example 8 : Mysqldump of the database and export to object store using Kando
-
-# Example 8.1 - Mysqldump of the database using our custom image
-
-oc delete blueprint mysql-blueprint -n kanister
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-rm -f mysql-blueprint.yaml
-
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -453,22 +466,25 @@ actions:
             root_password="{{ index .Phases.mysqldump.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}"
             mysqldump --column-statistics=0 -u root --password=${root_password} -h {{ index .Object.metadata.labels "app.kubernetes.io/instance" }} --single-transaction --all-databases > ${backup_file_path}
             sleep 360
+```
 
+Apply the yaml file to create the blueprint 
 
+```
+kubectl create -f mysql-blueprint.yaml
+```
 
-oc create -f mysql-blueprint.yaml
+Create the actionset
+
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql 
+```
 
---------------------
+### Example : 8.2 - Extending 8.1 to push our backup s3 location using Kando
 
-# Example : 8.2 - Extending 8.1 to push our backup s3 location using Kando
+### create s3compliant profile 
 
-oc delete blueprint mysql-blueprint -n kanister
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-rm -f mysql-blueprint.yaml
-
-# create s3compliant profile 
-
+```
 kanctl create profile s3compliant --access-key "xxxxxx" \
 	--secret-key "xxxxxx" \
 	--bucket "test-bucket" --region "us-east-2" \
@@ -477,12 +493,10 @@ kanctl create profile s3compliant --access-key "xxxxxx" \
 secret 's3-secret-syp2mp' created
 profile 's3-profile-j5ps9' created
 
-oc get profiles.cr.kanister.io -n mysql
-
-oc delete secret -n mysql s3-secret-syp2mp
-oc delete profiles.cr.kanister.io -n mysql s3-profile-j5ps9
+```
 
 
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -513,22 +527,24 @@ actions:
             root_password="{{ index .Phases.mysqldump.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}"
             dump_cmd="mysqldump --column-statistics=0 -u root --password=${root_password} -h {{ index .Object.metadata.labels "app.kubernetes.io/instance" }} --single-transaction --all-databases"
             ${dump_cmd} | kando location push --profile '{{ toJson .Profile }}' --path "${backup_path}" -
+```
 
-oc create -f mysql-blueprint.yaml
+Apply the yaml file to create the blueprint 
+
+```
+kubectl create -f mysql-blueprint.yaml
+```
+
+Create the actionset
+
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql --profile mysql/s3-profile-j5ps9
+```
 
-oc get pods -n mysql -w
-
-
-====================================================
-# Example 9 : mysql restore
+## Example 9 : mysql restore
 
 
-
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-oc delete blueprint mysql-blueprint -n kanister
-rm -f mysql-blueprint.yaml
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -591,30 +607,29 @@ actions:
           root_password="{{ index .Phases.mysqlrestore.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}"
           restore_cmd="mysql -u root --password=${root_password} -h {{ index .Object.metadata.labels "app.kubernetes.io/instance" }}"
           kando location pull --profile '{{ toJson .Profile }}' --path "${backup_file_path}" - | ${restore_cmd}
+```
+Apply the yaml file to create the blueprint 
 
+```
+kubectl create -f mysql-blueprint.yaml
+```
 
+Create the actionset to call the backup action
 
-
-oc create -f mysql-blueprint.yaml
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql --profile mysql/s3-profile-j5ps9
-oc get actionset -n kanister -w
+```
 
+Create the actionset to call the restore action
 
-
+```
 kanctl create actionset --action restore --from "backup-rkbr2" --namespace kanister --blueprint mysql-blueprint --profile mysql/s3-profile-j5ps9 --statefulset mysql/mysql
-oc get actionset -n kanister -w
+```
+
+## Example 10 : Delete the backup in object store
 
 
-
-
-====================================================
-# Example 10 : Delete the backup in object store
-
-
-oc get actionset --no-headers -n kanister | awk '{print $1}' | xargs oc delete actionset -n kanister
-oc delete blueprint mysql-blueprint -n kanister
-rm -f mysql-blueprint.yaml
-
+```
 apiVersion: cr.kanister.io/v1alpha1
 kind: Blueprint
 metadata:
@@ -695,18 +710,28 @@ actions:
         - |
           backup_file_path='{{ .ArtifactsIn.mysqlbackup.KeyValue.backuppath }}'
           kando location delete --profile '{{ toJson .Profile }}' --path "${backup_file_path}"
+```
 
+Apply the yaml file to create the blueprint 
 
+```
+kubectl create -f mysql-blueprint.yaml
+```
 
-oc create -f mysql-blueprint.yaml
+Create the actionset to call the backup action
+
+```
 kanctl create actionset --action backup --namespace kanister --blueprint mysql-blueprint --statefulset mysql/mysql --profile mysql/s3-profile-j5ps9
-oc get actionset -n kanister -w
+```
 
+Create the actionset to call the restore action
 
-
+```
 kanctl create actionset --action restore --from "backup-ssmqn" --namespace kanister --blueprint mysql-blueprint --profile mysql/s3-profile-j5ps9 --statefulset mysql/mysql
-oc get actionset -n kanister -w
+```
 
+Create the actionset to call the delete action
+
+```
 kanctl create actionset --action delete --from "backup-npsq8" --namespace kanister --blueprint mysql-blueprint --profile mysql/s3-profile-j5ps9 --statefulset mysql/mysql
-oc get actionset -n kanister -w
-
+```
