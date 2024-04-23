@@ -65,11 +65,11 @@ kubectl run mysql-client --rm --tty -i --restart='Never' --image  docker.io/bitn
 mysql -h mysql.mysql.svc.cluster.local -uroot -p"$MYSQL_ROOT_PASSWORD"
 ```
 
-Now that we have successfully setup the pre-requisites, let create our first blueprint.
+Now that I have successfully setup the pre-requisites, let's create our first blueprint.
 
 ## Example 1 - Using Kanister Blueprint to print "Hello world" in the logs.
 
-In this first example we will be creating a Kanister blueprint that will connect the `mysql` container in `mysql-0` pod in the `mysql` namespace and echo "Hello world - Example 1". 
+In this first example we will be creating a Kanister blueprint that will connect to the `mysql` container in `mysql-0` pod in the `mysql` namespace and echo "Hello world - Example 1". 
 
 This example is equivalent to running the following kubectl command 
 `kubectl exec -it --namespace mysql mysql-0 -c mysql -- echo "Hello world - Example 1"`
@@ -103,7 +103,6 @@ actions:
             echo "Hello world - Example 1"
 ```
 
-
 Apply the yaml file to create the blueprint 
 
 ```
@@ -112,7 +111,9 @@ kubectl create -f mysql-blueprint.yaml
 
 ## Step 2: Create an Actionset to run the blueprint
 
-Next step is to create an actionset 
+Next step is to create an actionset.
+
+ActionSet provides the runtime parameters such as what blueprint to execute and instructs the controller to run a specific action in the blueprint.
 
 ```
 apiVersion: cr.kanister.io/v1alpha1
@@ -130,7 +131,12 @@ spec:
       namespace: mysql
 ```
 
+Apply the yaml file to create the actionset
+
+```
 kubectl create -f actionset.yaml 
+```
+
 
 
 ## Example 2 : Introduce go template options
