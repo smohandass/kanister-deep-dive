@@ -21,6 +21,7 @@ Kanister reporsitory provides two command-line tools kanctl and kando.
 kanctl simplifies the process of creating the custom kanister resources and Kando is a tool to simplify object store interactions from within blueprints. Installation of these tools requires Go binary 
 
 Instructions to install Go binary can be found [here](https://go.dev/doc/install)
+
 Instructions to install kanctl and kando can be found [here](https://docs.kanister.io/tooling.html?highlight=kando#install-the-tools)
 
 ### Install Kanister Operator on the k8s cluster
@@ -54,6 +55,7 @@ To work with the kanister examples oulined in this repo we need a database servi
 kubectl create ns mysql
 helm install mysql -n mysql oci://registry-1.docker.io/bitnamicharts/mysql
 ```
+
 Verify that `mysql-0` pod is successfully running on the `mysql` namespace.
 
 Use the following command to run a mysql-client pod that can be used to connect to the database to run queries and to create database objects. 
@@ -63,13 +65,17 @@ kubectl run mysql-client --rm --tty -i --restart='Never' --image  docker.io/bitn
 mysql -h mysql.mysql.svc.cluster.local -uroot -p"$MYSQL_ROOT_PASSWORD"
 ```
 
-====================================================
-# Example 1 : echo "Hello world" 
+Now that we have successfully setup the pre-requisites, let create our first blueprint.
 
-## Step 1: Create our first Blueprint
+## Example 1 - Using Kanister Blueprint to print "Hello world" in the logs.
 
+In this first example we will be creating a Kanister blueprint that will connect the `mysql` container in `mysql-0` pod in the `mysql` namespace and echo "Hello world - Example 1". 
 
-kubectl exec -it --namespace mysql mysql-0 -c mysql -- echo " Hello world - Example 1 "
+This example is equivalent to running the following kubectl command 
+`kubectl exec -it --namespace mysql mysql-0 -c mysql -- echo "Hello world - Example 1"`
+
+### Step 1: Create our first Blueprint
+
 
 ```
 apiVersion: cr.kanister.io/v1alpha1
@@ -94,10 +100,19 @@ actions:
           - pipefail
           - -c
           - |
-            echo " Hello world - Example 1 "
+            echo "Hello world - Example 1"
+```
+
+
+Apply the yaml file to create the blueprint 
+
+```
+kubectl create -f mysql-blueprint.yaml
 ```
 
 ## Step 2: Create an Actionset to run the blueprint
+
+Next step is to create an actionset 
 
 ```
 apiVersion: cr.kanister.io/v1alpha1
@@ -115,8 +130,10 @@ spec:
       namespace: mysql
 ```
 
-====================================================
-# Example 2 : Introduce go template options
+kubectl create -f actionset.yaml 
+
+
+## Example 2 : Introduce go template options
 
 
 oc delete blueprint mysql-blueprint -n kanister
