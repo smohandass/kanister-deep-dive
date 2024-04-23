@@ -7,17 +7,22 @@ This repo contains examples used for Kanister deep dive workshop
 1. Kuberenetes cluster that is running v1.16 or higher. 
 2. Bastion server with kubectl, helm and docker installed
 3. Access to an S3 bucket and credentials.
-4. A running Kanister controller
-5. Database service 
+4. Install Kanister toold
+5. A running Kanister controller
+6. Database service 
 
-### Setting up Pre-Reqs
+## Setting up Pre-Reqs
 Step 1-3 in the Pre-reqs is self explanatory and I am not covering here
 
 ### Install Kanister Tools
 
 Kanister reporsitory provides two command-line tools kanctl and kando. kanctl simplifies the process of creating the custom kanister resources. Kando is a tool to simplify object store interactions from within blueprints. Installation of these tools requires Go binary 
 
-Instructions to install Go binary can be found here https://go.dev/doc/install
+Instructions to install Go binary can be found [here](https://go.dev/doc/install)
+
+Installing Kasten on AKS using Active Directory Authentication : [aks/kasten-install-ad-auth/README.md](https://github.com/smohandass/kasten-argocd-k8s/tree/main/aks/kasten-install-ad-auth)
+
+Installing Kasten on AKS using Token Authentication : [aks/kasten-install-token-auth/README.md](https://github.com/smohandass/kasten-argocd-k8s/tree/main/aks/kasten-install-token-auth)
 
 Instructions to install kanctl and kando can be found here https://docs.kanister.io/tooling.html?highlight=kando#install-the-tools
 
