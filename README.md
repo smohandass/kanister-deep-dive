@@ -735,3 +735,220 @@ Create the actionset to call the delete action
 ```
 kanctl create actionset --action delete --from "backup-npsq8" --namespace kanister --blueprint mysql-blueprint --profile mysql/s3-profile-j5ps9 --statefulset mysql/mysql
 ```
+
+
+## Example 11 : Running the blueprint using k10 and kando
+
+Install Kasten on the k8s cluster
+
+```
+kubectl create ns kasten-io
+helm repo add kasten https://charts.kasten.io/
+helm repo update
+
+helm install k10 kasten/k10 --namespace=kasten-io \
+    --set scc.create=true \
+    --set route.enabled=true \
+    --set route.tls.insecureEdgeTerminationPolicy=Redirect \
+    --set route.tls.termination=edge \
+    --set auth.basicAuth.enabled=true \
+    --set auth.basicAuth.htpasswd='k10admin:$2y$05$nAdXaSXBuR4rEg8ZDjq7kuPJ38MKkvYrR0NshLi.85Qw2faWt.6xW' 
+```
+
+Log into K10 console and create a location profile and a k10 policy to backup mysql namespace
+
+Create the blueprint in kasten-io namespace
+
+```
+apiVersion: cr.kanister.io/v1alpha1
+kind: Blueprint
+metadata:
+  name: mysql-blueprint
+actions:
+  backup:
+    outputArtifacts:
+      mysqlbackup:
+        keyValue:
+          backuppath: "{{ .Phases.mysqldump.Output.backuppath }}"
+    phases:
+    - func: KubeTask
+      name: mysqldump
+      objects:
+        mysqlSecret:
+          kind: Secret
+          name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}'
+          namespace: '{{ .StatefulSet.Namespace }}'
+      args:
+        image: bullseie/kanister-demo-mysql:1.0.0
+        namespace: "{{ .StatefulSet.Namespace }}"
+        command:
+          - bash
+          - -o
+          - errexit
+          - -o
+          - pipefail
+          - -c
+          - |
+            backupTimestamp=$(date "+%d_%b_%Y_%I_%M_%S_%p_%Z")
+            backup_file_path="mysql_dumps/{{ .StatefulSet.Namespace }}/dump-${backupTimestamp}.sql"
+            root_password="{{ index .Phases.mysqldump.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}"
+            dump_cmd="mysqldump --column-statistics=0 -u root --password=${root_password} -h {{ index .Object.metadata.labels "app.kubernetes.io/instance" }} --single-transaction --all-databases"
+            ${dump_cmd} | kando location push --profile '{{ toJson .Profile }}' --path "${backup_file_path}" -
+            kando output backuppath "${backup_file_path}"
+  restore:
+    inputArtifactNames:
+    - mysqlbackup
+    phases:
+    - func: KubeTask
+      name: mysqlrestore
+      objects:
+        mysqlSecret:
+          kind: Secret
+          name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}'
+          namespace: '{{ .StatefulSet.Namespace }}'
+      args:
+        image: bullseie/kanister-demo-mysql:1.0.0
+        namespace: "{{ .StatefulSet.Namespace }}"
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          backup_file_path='{{ .ArtifactsIn.mysqlbackup.KeyValue.backuppath }}'
+          root_password="{{ index .Phases.mysqlrestore.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}"
+          restore_cmd="mysql -u root --password=${root_password} -h {{ index .Object.metadata.labels "app.kubernetes.io/instance" }}"
+          kando location pull --profile '{{ toJson .Profile }}' --path "${backup_file_path}" - | ${restore_cmd}
+  delete:
+    inputArtifactNames:
+    - mysqlBackup
+    phases:
+    - func: KubeTask
+      name: mysqldelete
+      args:
+        image: bullseie/kanister-demo-mysql:1.0.0
+        namespace: "{{ .StatefulSet.Namespace }}"
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          backup_file_path='{{ .ArtifactsIn.mysqlbackup.KeyValue.backuppath }}'
+          kando location delete --profile '{{ toJson .Profile }}' --path "${backup_file_path}"
+```
+Apply the yaml file to create the blueprint 
+
+```
+kubectl create -n kasten-io -f mysql-blueprint.yaml
+```
+
+Annotate the statefulset with the blueprint 
+```
+kubectl --namespace mysql annotate statefulset/mysql kanister.kasten.io/blueprint=mysql-blueprint
+```
+Run the K10 policy on demand and review the s3 bucket
+
+
+## Example 12 : Running the blueprint using k10 and kopia
+
+Lets update the blueprint to use Kopia as the data mover to the s3 location
+
+```
+apiVersion: cr.kanister.io/v1alpha1
+kind: Blueprint
+metadata:
+  name: mysql-blueprint
+actions:
+  backup:
+    outputArtifacts:
+      mysqlbackup:
+        kopiaSnapshot: "{{ .Phases.mysqldump.Output.kopiaOutput }}"
+    phases:
+    - func: KubeTask
+      name: mysqldump
+      objects:
+        mysqlSecret:
+          kind: Secret
+          name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}'
+          namespace: '{{ .StatefulSet.Namespace }}'
+      args:
+        image: bullseie/kanister-demo-mysql:1.0.0
+        namespace: "{{ .StatefulSet.Namespace }}"
+        command:
+          - bash
+          - -o
+          - errexit
+          - -o
+          - pipefail
+          - -c
+          - |
+            backup_file_path="mysqldump.sql"
+            root_password="{{ index .Phases.mysqldump.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}"
+            dump_cmd="mysqldump --column-statistics=0 -u root --password=${root_password} -h {{ index .Object.metadata.labels "app.kubernetes.io/instance" }} --single-transaction --all-databases"
+            ${dump_cmd} | kando location push --profile '{{ toJson .Profile }}' --path "${backup_file_path}" --output-name "kopiaOutput" -
+  restore:
+    inputArtifactNames:
+    - mysqlbackup
+    phases:
+    - func: KubeTask
+      name: mysqlrestore
+      objects:
+        mysqlSecret:
+          kind: Secret
+          name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}'
+          namespace: '{{ .StatefulSet.Namespace }}'
+      args:
+        image: bullseie/kanister-demo-mysql:1.0.0
+        namespace: "{{ .StatefulSet.Namespace }}"
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          backup_file_path="mysqldump.sql"
+          kopia_snap_id='{{ .ArtifactsIn.mysqlbackup.KopiaSnapshot }}'
+          echo "kopia_snap_id : ${kopia_snap_id}"
+          root_password="{{ index .Phases.mysqlrestore.Secrets.mysqlSecret.Data "mysql-root-password" | toString }}"
+          restore_cmd="mysql -u root --password=${root_password} -h {{ index .Object.metadata.labels "app.kubernetes.io/instance" }}"
+          kando location pull --profile '{{ toJson .Profile }}' --path "${backup_file_path}" --kopia-snapshot "${kopia_snap_id}" - | ${restore_cmd}
+  delete:
+    inputArtifactNames:
+    - mysqlBackup
+    phases:
+    - func: KubeTask
+      name: mysqldelete
+      args:
+        image: bullseie/kanister-demo-mysql:1.0.0
+        namespace: "{{ .StatefulSet.Namespace }}"
+        command:
+        - bash
+        - -o
+        - errexit
+        - -o
+        - pipefail
+        - -c
+        - |
+          backup_file_path="mysqldump.sql" 
+          kopia_snap_id='{{ .ArtifactsIn.mysqlbackup.KopiaSnapshot }}'
+          kando location delete --profile '{{ toJson .Profile }}' --path "${backup_file_path}" --kopia-snapshot "${kopia_snap}"
+```
+
+Apply the yaml file to create the blueprint 
+```
+kubectl create -n kasten-io -f mysql-blueprint.yaml
+```
+
+Annotate the statefulset with the blueprint 
+```
+kubectl --namespace mysql annotate statefulset/mysql kanister.kasten.io/blueprint=mysql-blueprint
+```
+
+Run the K10 policy on demand and review the s3 bucket
