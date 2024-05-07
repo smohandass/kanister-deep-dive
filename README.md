@@ -65,6 +65,16 @@ kubectl run mysql-client --rm --tty -i --restart='Never' --image  docker.io/bitn
 mysql -h mysql.mysql.svc.cluster.local -uroot -p"$MYSQL_ROOT_PASSWORD"
 ```
 
+Next, let's create a database, a table and insert some two rows.
+
+```
+CREATE DATABASE test;
+USE test;
+CREATE TABLE pets (name VARCHAR(20), owner VARCHAR(20), species VARCHAR(20), sex CHAR(1), birth DATE, death DATE);
+INSERT INTO pets VALUES ('Puffball','Diane','hamster','f','1999-03-30',NULL);
+INSERT INTO pets VALUES ('mylo','chris','poodle','f','2010-03-30',NULL);
+```
+
 Now that I have successfully setup the pre-requisites, let's create our first blueprint.
 
 ## Example 1 - Using Kanister Blueprint to print "Hello world" in the logs.
